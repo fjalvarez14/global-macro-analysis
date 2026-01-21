@@ -30,6 +30,22 @@ for table in tables:
 
 print()
 
+# Show sample data from each table
+print("=" * 60)
+print("SAMPLE DATA (HEAD OF EACH TABLE)")
+print("=" * 60)
+
+for table in tables:
+    try:
+        print(f"\n{table}:")
+        print("-" * 60)
+        sample = con.execute(f"SELECT * FROM {table} LIMIT 5").fetchdf()
+        print(sample.to_string())
+    except Exception as e:
+        print(f"Could not read table: {e}")
+
+print()
+
 if len(sys.argv) > 1:
     query = ' '.join(sys.argv[1:])
     print("=" * 60)
