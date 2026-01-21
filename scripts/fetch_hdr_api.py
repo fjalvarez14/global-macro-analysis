@@ -11,7 +11,7 @@ import logging
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Path configuration - Docker-aware
+# Path configuration
 def get_base_path():
     """Returns base path depending on environment (Docker or local)"""
     if os.path.exists('/opt/airflow'):
@@ -19,20 +19,6 @@ def get_base_path():
     return Path(__file__).parent.parent
 
 # Pydantic Models for validation
-
-class HDRConfig(BaseModel):
-    """Configuration for HDR data fetching"""
-    indicators: List[str] = Field(..., min_length=1)
-    start_year: int = Field(..., ge=1990)
-    end_year: int = Field(..., le=2030)
-    apikey: str = Field(..., min_length=10)
-    
-    @field_validator('end_year')
-    @classmethod
-    def validate_years(cls, v, info):
-        if 'start_year' in info.data and v < info.data['start_year']:
-            raise ValueError('end_year must be >= start_year')
-        return v
 
 class HDRDataPoint(BaseModel):
     """Model for individual HDR data point from API"""
@@ -179,11 +165,6 @@ def pivot_and_validate(df_hdr):
 
 def run_hdr_ingestion(start_year=None, end_year=None):
     """Main function to run HDR data ingestion for Airflow
-    
-    Args:
-        start_year: Optional start year (defaults to current_year - 26)
-        end_year: Optional end year (defaults to current year)
-    
     Returns:
         bool: True if successful, False otherwise
     """
@@ -195,23 +176,13 @@ def run_hdr_ingestion(start_year=None, end_year=None):
             return False
         
         # Set time frame
-        current_year = datetime.now().year
-        if start_year is None:
-            start_year = current_year - 26
-        if end_year is None:
-            end_year = current_year
+        start_year = 2000
+        end_year = datetime.now().year
         
-        # Validate configuration
-        config = HDRConfig(
-            indicators=indicators,
-            start_year=start_year,
-            end_year=end_year,
-            apikey=apikey
-        )
-        logger.info(f"Configuration validated: {len(config.indicators)} indicators, years {config.start_year}-{config.end_year}")
+        logger.info(f"Fetching {len(indicators)} indicators, years {start_year}-{end_year}")
         
         # Fetch data from API
-        df_hdr = fetch_hdr_data(config.indicators, config.start_year, config.end_year, config.apikey)
+        df_hdr = fetch_hdr_data(indicators, start_year, end_year, apikey)
         
         if df_hdr.empty:
             logger.error("No data fetched from HDR API")
@@ -250,7 +221,7 @@ def run_hdr_ingestion(start_year=None, end_year=None):
         con.close()
         
         # Export CSV backup
-        backup_file = backup_path / f"hdr_indicators_{config.start_year}_{config.end_year}.csv"
+        backup_file = backup_path / f"hdr_indicators_{start_year}_{end_year}.csv"
         df_hdr_final.to_csv(backup_file, index=False)
         logger.info(f"Saved backup CSV to {backup_file}")
         logger.info(f"Total rows: {len(df_hdr_final)}, Total columns: {len(df_hdr_final.columns)}")

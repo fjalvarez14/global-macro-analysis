@@ -12,7 +12,7 @@ import logging
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Path configuration - Docker-aware
+# Path configuration
 def get_base_path():
     """Returns base path depending on environment (Docker or local)"""
     if os.path.exists('/opt/airflow'):
@@ -20,19 +20,6 @@ def get_base_path():
     return Path(__file__).parent.parent
 
 # Pydantic Models for validation
-
-class IMFConfig(BaseModel):
-    """Configuration for IMF data fetching"""
-    indicators: List[str] = Field(..., min_length=1)
-    start_year: int = Field(..., ge=1990)
-    end_year: int = Field(..., le=2030)
-    
-    @field_validator('end_year')
-    @classmethod
-    def validate_years(cls, v, info):
-        if 'start_year' in info.data and v <= info.data['start_year']:
-            raise ValueError('end_year must be > start_year')
-        return v
 
 class IMFWEODataPoint(BaseModel):
     """Model for individual IMF WEO data point"""
@@ -233,32 +220,19 @@ def pivot_and_validate_weo(df_imf):
 
 def run_imf_ingestion(start_year=None, end_year=None):
     """Main function to run IMF data ingestion for Airflow
-    
-    Args:
-        start_year: Optional start year (defaults to current_year - 26)
-        end_year: Optional end year (defaults to current year)
-    
+
     Returns:
         bool: True if successful, False otherwise
     """
     try:
         # Set time frame
-        current_year = datetime.now().year
-        if start_year is None:
-            start_year = current_year - 26
-        if end_year is None:
-            end_year = current_year
+        start_year = 2000
+        end_year = datetime.now().year
         
-        # Validate configuration
-        config = IMFConfig(
-            indicators=imf_indicators,
-            start_year=start_year,
-            end_year=end_year
-        )
-        logger.info(f"Configuration validated: {len(config.indicators)} indicators, years {config.start_year}-{config.end_year}")
+        logger.info(f"Fetching {len(imf_indicators)} indicators, years {start_year}-{end_year}")
         
         # Fetch IMF WEO data
-        df_imf = fetch_imf_weo_json(config.indicators, config.start_year, config.end_year)
+        df_imf = fetch_imf_weo_json(imf_indicators, start_year, end_year)
         
         if df_imf.empty:
             logger.error("No IMF WEO data fetched")
@@ -269,7 +243,7 @@ def run_imf_ingestion(start_year=None, end_year=None):
         logger.info(f"Indicators: {df_imf['indicator'].unique()}")
         
         # Fetch FDI data
-        df_fdi = fetch_fdi_all_countries(config.start_year, config.end_year)
+        df_fdi = fetch_fdi_all_countries(start_year, end_year)
         
         if df_fdi.empty:
             logger.warning("No FDI data fetched, continuing with WEO data only")
@@ -318,13 +292,13 @@ def run_imf_ingestion(start_year=None, end_year=None):
         con.close()
         
         # Export CSV backups
-        backup_file_weo = backup_path / f"imf_weo_indicators_{config.start_year}_{config.end_year}.csv"
+        backup_file_weo = backup_path / f"imf_weo_indicators_{start_year}_{end_year}.csv"
         df_imf_final.to_csv(backup_file_weo, index=False)
         logger.info(f"Saved backup CSV to {backup_file_weo}")
         logger.info(f"Total WEO rows: {len(df_imf_final)}")
         
         if not df_fdi.empty:
-            backup_file_fdi = backup_path / f"imf_fdi_indicator_{config.start_year}_{config.end_year}.csv"
+            backup_file_fdi = backup_path / f"imf_fdi_indicator_{start_year}_{end_year}.csv"
             df_fdi.to_csv(backup_file_fdi, index=False)
             logger.info(f"Saved backup CSV to {backup_file_fdi}")
             logger.info(f"Total FDI rows: {len(df_fdi)}")
