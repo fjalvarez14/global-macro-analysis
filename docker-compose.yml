@@ -14,8 +14,8 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    # Custom environment variables
-    HDR_API_KEY: 'HDR-uBDs6EP9ynWLIF6cYD3BV1suJdHxEyY2'
+    # Custom environment variables (HDR_API_KEY loaded from .env file)
+    HDR_API_KEY: ${HDR_API_KEY}
     PYTHONPATH: /opt/airflow
   volumes:
     - ./airflow/dags:/opt/airflow/dags
