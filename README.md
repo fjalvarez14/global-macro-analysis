@@ -96,7 +96,7 @@ global_macro_analysis/
 
 ### IMF (8 indicators)
 - WEO: Public debt, primary balance, investment, current account, PPP, trade balance, unemployment
-- FDI: Foreign Direct Investment index
+- FDI: Financial Development index
 - Time frame: 26-year rolling window (2000-2026)
 
 ### UNDP HDR (23 indicators)
