@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Airflow
+airflow/logs/*
+!airflow/logs/.gitkeep
+airflow/*.log
+airflow/*.pid
+airflow/*.db
+airflow/*.err
+airflow/*.out
+airflow/airflow.cfg
+airflow/webserver_config.py
+
+# DuckDB
+data/warehouse.duckdb
+data/warehouse.duckdb.wal
+
+# Data backups (optional - include if files are large)
+data_backups/*.csv
+!data_backups/.gitkeep
+
+# Environment files (contains secrets)
+.env
+
+# Docker
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
