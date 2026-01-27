@@ -179,8 +179,6 @@ def run_hdr_ingestion(start_year=None, end_year=None):
         start_year = 2000
         end_year = datetime.now().year
         
-        logger.info(f"Fetching {len(indicators)} indicators, years {start_year}-{end_year}")
-        
         # Fetch data from API
         df_hdr = fetch_hdr_data(indicators, start_year, end_year, apikey)
         

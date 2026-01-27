@@ -239,7 +239,6 @@ def run_imf_ingestion(start_year=None, end_year=None):
             return False
         
         logger.info(f"IMF WEO DataFrame shape: {df_imf.shape}")
-        logger.info(f"Years available: {sorted(df_imf['year'].unique())}")
         logger.info(f"Indicators: {df_imf['indicator'].unique()}")
         
         # Fetch FDI data

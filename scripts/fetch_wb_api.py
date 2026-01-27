@@ -7,6 +7,7 @@ import duckdb
 from pathlib import Path
 import os
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -24,17 +25,9 @@ class WBDataPoint(BaseModel):
     """Model for individual World Bank data point"""
     country_code: str = Field(..., min_length=2, max_length=3)
     Country: str
-    year: str  # Year as string to match WB API format
+    year: int = Field(..., ge=1990, le=2030)
     indicator: str
     value: Optional[float] = None
-    
-    @field_validator('year')
-    @classmethod
-    def validate_year(cls, v):
-        year_int = int(v)
-        if year_int < 1990 or year_int > 2030:
-            raise ValueError(f'Year {year_int} out of valid range')
-        return v
 
 class WBPivotedRow(BaseModel):
     """Model for pivoted World Bank data row with all indicators"""
@@ -42,7 +35,7 @@ class WBPivotedRow(BaseModel):
     
     country_code: str
     Country: str
-    year: str
+    year: int
     NY_GDP_MKTP_CD: Optional[float] = Field(None, alias='GDP (current US$)')
     NY_GDP_MKTP_KD: Optional[float] = Field(None, alias='GDP (constant 2015 US$)')
     NY_GDP_MKTP_PP_CD: Optional[float] = Field(None, alias='GDP, PPP (current international $)')
@@ -120,38 +113,67 @@ indicators = [
 ]
 
 
+# Helper function for parallel fetching
+def _fetch_indicator_chunk(chunk_indicators, countries, years, chunk_num, total_chunks):
+    """Fetch a subset of indicators - used for parallel processing"""
+    try:
+        logger.info(f"Fetching chunk {chunk_num}/{total_chunks} ({len(chunk_indicators)} indicators)...")
+        df = wb.data.DataFrame(
+            chunk_indicators,
+            countries,
+            time=years,
+            labels=True,
+            numericTimeKeys=True,
+            skipBlanks=True,
+            skipAggs=True
+        )
+        df = df.reset_index()
+        logger.info(f"Chunk {chunk_num}/{total_chunks} completed: {len(df)} rows")
+        return df
+    except Exception as e:
+        logger.error(f"Error fetching chunk {chunk_num}: {str(e)}")
+        return pd.DataFrame()
+
+
 # Fetch World Bank data
 def fetch_wb_data(indicators, start_year, end_year):
-    """DataFrame with validated long-format data from World Bank API"""
+    """DataFrame with validated long-format data from World Bank API using parallel chunked requests"""
     years = list(range(start_year, end_year))
+    countries = wb.region.members('WLD')
     
-    logger.info(f"Fetching {len(indicators)} indicators for {len(years)} years across all economies...")
+    # Split indicators into chunks for parallel fetching
+    chunk_size = 7
+    indicator_chunks = [indicators[i:i + chunk_size] for i in range(0, len(indicators), chunk_size)]
+    total_chunks = len(indicator_chunks)
     
-    # Pull data from World Bank API
-    df = wb.data.DataFrame(
-        indicators,
-        time=years,
-        labels=True  
-    )
+    logger.info(f"Fetching {len(indicators)} indicators in {total_chunks} parallel chunks for years {start_year}-{end_year-1}...")
     
-    # Reset index to convert multi-index to regular columns
-    df = df.reset_index()
+    # Fetch chunks in parallel
+    all_dfs = []
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_chunk = {
+            executor.submit(_fetch_indicator_chunk, chunk, countries, years, idx+1, total_chunks): idx 
+            for idx, chunk in enumerate(indicator_chunks)
+        }
+        
+        for future in as_completed(future_to_chunk):
+            df_chunk = future.result()
+            if not df_chunk.empty:
+                all_dfs.append(df_chunk)
     
-    logger.info(f"Retrieved {len(df)} observations")
+    if not all_dfs:
+        logger.error("No data retrieved from any chunks")
+        return pd.DataFrame()
     
-    # Rename economy to country_code and reformat year columns
-    rename_dict = {'economy': 'country_code', 'Series': 'indicators'}
-    for col in df.columns:
-        if col.startswith('YR'):
-            rename_dict[col] = col[2:] 
+    df = pd.concat(all_dfs, ignore_index=True)
+    logger.info(f"Combined {len(all_dfs)} chunks: {len(df)} total observations")
     
-    df = df.rename(columns=rename_dict)
+    df = df.rename(columns={'economy': 'country_code', 'Series': 'indicator'})
     
     # Transform year columns into rows
-    year_columns = [col for col in df.columns if col.isdigit()]
-    id_columns = ['country_code', 'Country', 'series', 'indicators']
+    year_columns = [col for col in df.columns if isinstance(col, int)]
+    id_columns = ['country_code', 'Country', 'indicators']
     
-    # Melt the DataFrame to convert year columns to rows
     df_long = df.melt(
         id_vars=id_columns,
         value_vars=year_columns,
@@ -205,7 +227,7 @@ def pivot_and_validate(df_wb):
     for idx, row in df_wb_pivoted.iterrows():
         try:
             validated_row = WBPivotedRow(**row.to_dict())
-            validated_rows.append(validated_row.model_dump(by_alias=False))
+            validated_rows.append(validated_row.model_dump())
         except Exception as e:
             validation_errors.append(f"Row {idx} ({row.get('Country', 'Unknown')}): {str(e)}")
 
@@ -231,8 +253,6 @@ def run_wb_ingestion(start_year=None, end_year=None):
         # Set time frame
         start_year = 2000
         end_year = datetime.now().year
-        
-        logger.info(f"Fetching {len(indicators)} indicators, years {start_year}-{end_year}")
         
         # Fetch data from API
         df_wb = fetch_wb_data(indicators, start_year, end_year)
