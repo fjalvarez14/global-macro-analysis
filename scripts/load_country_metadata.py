@@ -29,8 +29,7 @@ def run_seed_ingestion():
         
         logger.info("Loading country metadata...")
         
-        # Read CSV
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(csv_path, keep_default_na=False, na_values=[''])
         logger.info(f"Read {len(df)} countries from {csv_path}")
         logger.info(f"Columns: {df.columns.tolist()}")
         
@@ -87,13 +86,13 @@ def run_seed_ingestion():
         
     except FileNotFoundError as e:
         logger.error(f"File not found: {str(e)}")
-        return False
+        raise
     except duckdb.Error as e:
         logger.error(f"Database error: {str(e)}")
-        return False
+        raise
     except Exception as e:
         logger.error(f"Unexpected error during seed ingestion: {str(e)}")
-        return False
+        raise
 
 if __name__ == "__main__":
     # Configure logging for standalone execution

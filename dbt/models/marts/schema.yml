@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: dim_country
+    description: "Country dimension table with metadata and regional groupings"
+    columns:
+      - name: country_code
+        description: "ISO3 country code (primary key)"
+        tests:
+          - unique
+          - not_null
+      - name: country_name
+        description: "Official country name"
+        tests:
+          - not_null
+      - name: continent
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Africa', 'Asia', 'Europe', 'North America', 'South America', 'Oceania', 'Antarctica']
+      - name: income_group
+        tests:
+          - accepted_values:
+              values: ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
+
+  - name: fact_macro_indicators
+    description: "Wide format fact table with 56 indicators from WB, HDR, and IMF"
+    columns:
+      - name: country_code
+        description: "ISO3 country code (foreign key to dim_country)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_country')
+              field: country_code
+      - name: year
+        description: "Calendar year"
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - country_code
+            - year
+
+  - name: mart_country_profiles
+    description: "Latest year snapshot of key indicators by country for quick analysis"
+    columns:
+      - name: country_code
+        description: "ISO3 country code (primary key)"
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_country')
+              field: country_code
+      - name: year
+        description: "Most recent year with data"
+        tests:
+          - not_null

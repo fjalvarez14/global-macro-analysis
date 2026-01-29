@@ -15,6 +15,7 @@ build/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+notebooks/
 
 # Airflow
 airflow/logs/*
@@ -30,6 +31,12 @@ airflow/webserver_config.py
 # DuckDB
 data/warehouse.duckdb
 data/warehouse.duckdb.wal
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
 
 # Data backups (optional - include if files are large)
 data_backups/*.csv
@@ -57,3 +64,7 @@ desktop.ini
 *.tmp
 *.bak
 *.cache
+
+# Other
+CLEANUP.md 
+DEPLOYMENT.md

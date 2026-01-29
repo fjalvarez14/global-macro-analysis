@@ -1,14 +1,33 @@
 # Global Macro Analysis Data Pipeline
 
-Data engineering pipeline for collecting, validating, and analyzing global macroeconomic indicators from World Bank, IMF, and UNDP HDR.
+Data engineering pipeline for collecting, validating, transforming, and analyzing global macroeconomic indicators from World Bank, IMF, and UNDP HDR.
 
 ## Architecture
 
-- **Orchestration**: Apache Airflow
+- **Orchestration**: Apache Airflow with CeleryExecutor
 - **Data Warehouse**: DuckDB
-- **Transformation**: dbt (to be implemented)
-- **Visualization**: Metabase (to be implemented)
+- **Transformation**: dbt (staging → marts)
+- **Data Quality**: Soda Core
 - **Container Platform**: Docker Compose
+
+## Pipeline Overview
+
+**Ingestion Layer (Airflow DAGs)**
+- Fetch data from World Bank, IMF, UNDP HDR APIs
+- Load country metadata from CSV
+- Store raw data in DuckDB `raw` schema
+
+**Transformation Layer (dbt)**
+- **Staging models**: Clean and standardize raw data (4 views)
+- **Marts models**: Analytics-ready dimensional model (3 tables)
+  - `dim_country`: Country dimension
+  - `fact_macro_indicators`: 66 indicators in wide format
+  - `mart_country_profiles`: Latest year snapshot
+
+**Quality Layer (Soda)**
+- Row counts, duplicates, NULL thresholds
+- Value range validations
+- Schema integrity checks
 
 ## Quick Start
 
@@ -51,32 +70,47 @@ docker-compose up -d
 - Username: `airflow`
 - Password: `airflow`
 
-### 5. Run Data Ingestion
+### 5. Run Data Pipeline
 
-Once Airflow is running, trigger the DAGs manually from the UI:
-1. **`load_seed_data`** - Run FIRST to load country metadata
+**Step 1: Run Ingestion DAGs** (trigger manually from Airflow UI):
+1. **`load_seed_data`** - Load country metadata (run FIRST)
 2. **`fetch_wb_data`** - World Bank indicators (35 indicators)
 3. **`fetch_hdr_data`** - UNDP HDR indicators (23 indicators)
-4. **`fetch_imf_data`** - IMF WEO + FDI indicators (8 indicators)
+4. **`fetch_imf_data`** - IMF WEO + FDI indicators (5 indicators)
 
-All DAGs are set to manual trigger (no automatic scheduling).
+**Step 2: Run Transformation DAG**:
+5. **`dbt_soda_transform`** - Run dbt models and Soda quality checks
+   - Task 1: `dbt_run_models` - Create staging views and marts tables
+   - Task 2: `dbt_test_models` - Run dbt tests
+   - Task 3: `soda_scan_staging` - Validate staging data
+   - Task 4: `soda_scan_marts` - Validate marts data
 
-## Project Structure
-
-```
-global_macro_analysis/
-├── airflow/
-│   ├── dags/              # Airflow DAG definitions
+All DAGs are set to manual trigger (no automatic sch (5 DAGs)
 │   ├── logs/              # Airflow logs
+│   ├── config/            # Airflow configuration
 │   └── plugins/           # Custom Airflow plugins
 ├── data/
-│   └── warehouse.duckdb   # DuckDB database file
-├── data_backup/           # CSV backups of raw data
-├── scripts/               # Data fetching scripts (production-ready)
+│   ├── warehouse.duckdb   # DuckDB database (raw + marts schemas)
+│   └── seeds/
+│       └── country_continent_group.csv
+├── data_backups/          # CSV backups of raw data
+├── dbt/                   # dbt transformation project
+│   ├── models/
+│   │   ├── staging/       # 4 staging views
+│   │   └── marts/         # 3 marts tables
+│   ├── dbt_project.yml
+│   ├── profiles.yml
+│   └── packages.yml       # dbt_utils dependency
+├── soda/                  # Soda data quality checks
+│   ├── checks/            # 5 YAML check files
+│   ├── configuration.yml  # Staging schema config
+│   └── configuration_marts.yml  # Marts schema config
+├── scripts/               # Data fetching scripts
 │   ├── fetch_wb_api.py
 │   ├── fetch_hdr_api.py
 │   ├── fetch_imf_api.py
-│   ├── load_country_metadata.py
+│   └── load_country_metadata.py
+├── docker-compose.ya_metadata.py
 │   └── notebooks/        # Exploratory notebooks
 ├── dbt/                   # dbt project (to be implemented)
 ├── data/
@@ -86,10 +120,11 @@ global_macro_analysis/
 ├── docker-compose.yml
 ├── Dockerfile
 └── requirements.txt
-```
-
-## Data Sources
-
+```5 indicators)
+- WEO: Public debt, primary balance, current account, PPP conversion rate
+- FDI: Financial Development Index
+- Time frame: 26-year rolling window (2000-2026)
+- **Note**: FDI uses ISO2 codes, converted to ISO3 via country_metadata join
 ### World Bank (35 indicators)
 - GDP metrics, inflation, trade, employment, inequality, education, health spending
 - Time frame: 26-year rolling window (2000-2026)

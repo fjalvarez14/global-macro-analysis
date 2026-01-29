@@ -32,7 +32,7 @@ class IMFWEODataPoint(BaseModel):
     @classmethod
     def validate_year(cls, v):
         year_int = int(v) if isinstance(v, str) else v
-        if year_int < 1990 or year_int > 2030:
+        if year_int < 2000 or year_int > datetime.now().year:
             raise ValueError(f'Year {year_int} out of valid range')
         return str(year_int)  # Keep as string for consistency
     
@@ -40,7 +40,7 @@ class IMFWEODataPoint(BaseModel):
 class FDIDataPoint(BaseModel):
     """Model for IMF FDI data point"""
     country_code: str = Field(..., min_length=2, max_length=3)
-    year: int = Field(..., ge=1990, le=2030)
+    year: int = Field(..., ge=2000, le=datetime.now().year)
     FD_FD_IX: Optional[float] = None
     
     @field_validator('country_code')
@@ -50,13 +50,6 @@ class FDIDataPoint(BaseModel):
         if v.startswith("1C_") or "ALLC" in v:
             raise ValueError(f'Aggregate country code {v} not allowed')
         return v
-    
-    @field_validator('FD_FD_IX')
-    @classmethod
-    def validate_fdi_index(cls, v):
-        if v is not None and (v < 0 or v > 1):
-            raise ValueError(f'FDI index {v} must be between 0 and 1')
-        return v
 
 class IMFPivotedRow(BaseModel):
     """Model for pivoted IMF WEO data row"""
@@ -64,23 +57,15 @@ class IMFPivotedRow(BaseModel):
     year: str
     GGXWDG_NGDP: Optional[float] = None  # Gross public debt
     GGXCNL_NGDP: Optional[float] = None  # Primary balance
-    NI_GDP: Optional[float] = None       # Total Investment
     BCA: Optional[float] = None          # Current account
     PPPEX: Optional[float] = None        # PPP conversion rate
-    BT_GDP: Optional[float] = None       # Trade Balance
-    LUR: Optional[float] = None          # Unemployment rate
-    
 
-
-#  7 indicator - Yearly - IMF WEO
+#  5 indicator - Yearly - IMF WEO
 imf_indicators = [ 
     'GGXWDG_NGDP',           # Gross public debt - WEO
     'GGXCNL_NGDP',           # Primary balance - WEO
-    'NI_GDP',                # Total Investment (% of GDP)
     'BCA',                   # Current account (absolute)
-    'PPPEX',                 # Implied PPP conversion rate
-    'BT_GDP',                # Trade Balance (% of GDP)
-    'LUR'                    # Unemployment rate                                   
+    'PPPEX'                 # Implied PPP conversion rate                          
 ]
 
 
@@ -235,8 +220,9 @@ def run_imf_ingestion(start_year=None, end_year=None):
         df_imf = fetch_imf_weo_json(imf_indicators, start_year, end_year)
         
         if df_imf.empty:
-            logger.error("No IMF WEO data fetched")
-            return False
+            error_msg = "No IMF WEO data fetched"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
         logger.info(f"IMF WEO DataFrame shape: {df_imf.shape}")
         logger.info(f"Indicators: {df_imf['indicator'].unique()}")
@@ -307,13 +293,13 @@ def run_imf_ingestion(start_year=None, end_year=None):
         
     except requests.RequestException as e:
         logger.error(f"API request failed: {str(e)}")
-        return False
+        raise
     except duckdb.Error as e:
         logger.error(f"Database error: {str(e)}")
-        return False
+        raise
     except Exception as e:
         logger.error(f"Unexpected error during IMF ingestion: {str(e)}")
-        return False
+        raise
 
 
 if __name__ == "__main__":

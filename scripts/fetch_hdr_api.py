@@ -24,17 +24,9 @@ class HDRDataPoint(BaseModel):
     """Model for individual HDR data point from API"""
     countryIsoCode: str = Field(..., min_length=2, max_length=3)
     country: str
-    year: int = Field(..., ge=1990, le=2030)
+    year: int = Field(..., ge=1990, le=datetime.now().year)
     indicatorCode: str
     value: Optional[float] = None
-    
-    @field_validator('value')
-    @classmethod
-    def validate_value(cls, v):
-        if v is not None and (v < -100 or v > 1000):
-            raise ValueError(f'Value {v} out of reasonable range')
-        return v
-
 
 class HDRPivotedRow(BaseModel):
     """Model for pivoted data row with all indicators"""
@@ -172,8 +164,9 @@ def run_hdr_ingestion(start_year=None, end_year=None):
         # Get API key from environment
         apikey = os.getenv('HDR_API_KEY')
         if not apikey:
-            logger.error("HDR_API_KEY environment variable not set")
-            return False
+            error_msg = "HDR_API_KEY environment variable not set"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
         # Set time frame
         start_year = 2000
@@ -183,8 +176,9 @@ def run_hdr_ingestion(start_year=None, end_year=None):
         df_hdr = fetch_hdr_data(indicators, start_year, end_year, apikey)
         
         if df_hdr.empty:
-            logger.error("No data fetched from HDR API")
-            return False
+            error_msg = "No data fetched from HDR API"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
         # Pivot and validate
         df_hdr_final = pivot_and_validate(df_hdr)
@@ -229,13 +223,13 @@ def run_hdr_ingestion(start_year=None, end_year=None):
         
     except requests.RequestException as e:
         logger.error(f"API request failed: {str(e)}")
-        return False
+        raise
     except duckdb.Error as e:
         logger.error(f"Database error: {str(e)}")
-        return False
+        raise
     except Exception as e:
         logger.error(f"Unexpected error during HDR ingestion: {str(e)}")
-        return False
+        raise
 
 
 if __name__ == "__main__":

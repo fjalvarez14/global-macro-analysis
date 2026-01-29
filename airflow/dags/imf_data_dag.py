@@ -3,6 +3,7 @@ from airflow.providers.standard.operators.python import PythonOperator
 from datetime import datetime, timedelta
 import sys
 import logging
+import os
 
 sys.path.insert(0, '/opt/airflow/scripts')
 
@@ -15,10 +16,10 @@ logger = logging.getLogger(__name__)
 default_args = {
     'owner': 'data_engineering',
     'depends_on_past': False,
-    'email_on_failure': False,
-    'email_on_retry': False,
+    'email_on_failure': True,
+    'email': [os.getenv('SMTP_USER')],
     'retries': 2,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=1),
 }
 
 with DAG(
@@ -38,16 +39,7 @@ with DAG(
         doc_md="""
         ## IMF Data Ingestion
         
-        Fetches IMF economic indicators from two sources:
-        
-        **WEO (7 indicators):**
-        - Public debt, primary balance, investment
-        - Current account, PPP, trade balance, unemployment
-        
-        **FDI:**
-        - Foreign Direct Investment index
-        
-        26-year rolling window (default)
+        Fetches IMF economic indicators from the WEO and FDI datasets from year 2000 (default).
         Data is validated with Pydantic and loaded to DuckDB raw schema.
         """
     )

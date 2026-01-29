@@ -1,0 +1,71 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: country_metadata
+        columns:
+          - name: iso3
+            tests:
+              - unique
+              - not_null
+          - name: country_name
+            tests:
+              - not_null
+      
+      - name: wb_indicators
+        columns:
+          - name: country_code
+            tests:
+              - not_null
+          - name: year
+            tests:
+              - not_null
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns:
+                - country_code
+                - year
+      
+      - name: hdr_indicators
+        columns:
+          - name: countryIsoCode
+            tests:
+              - not_null
+          - name: year
+            tests:
+              - not_null
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns:
+                - countryIsoCode
+                - year
+      
+      - name: imf_weo_indicators
+        columns:
+          - name: country_code
+            tests:
+              - not_null
+          - name: year
+            tests:
+              - not_null
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns:
+                - country_code
+                - year
+      
+      - name: imf_fdi_indicator
+        columns:
+          - name: country_code
+            tests:
+              - not_null
+          - name: year
+            tests:
+              - not_null
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              combination_of_columns:
+                - country_code
+                - year

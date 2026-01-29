@@ -3,6 +3,7 @@ from airflow.providers.standard.operators.python import PythonOperator
 from datetime import datetime, timedelta
 import sys
 import logging
+import os
 
 sys.path.insert(0, '/opt/airflow/scripts')
 
@@ -15,10 +16,10 @@ logger = logging.getLogger(__name__)
 default_args = {
     'owner': 'data_engineering',
     'depends_on_past': False,
-    'email_on_failure': False,
-    'email_on_retry': False,
+    'email_on_failure': True,
+    'email': [os.getenv('SMTP_USER')],
     'retries': 2,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=1),
 }
 
 with DAG(
@@ -38,11 +39,7 @@ with DAG(
         doc_md="""
         ## World Bank Data Ingestion
         
-        Fetches 35 macroeconomic indicators from World Bank API:
-        - GDP metrics, inflation, trade, employment
-        - Inequality, education, health spending
-        - 26-year rolling window (default)
-        
+        Fetches 28 macroeconomic indicators from World Bank API from year 2000 (default)
         Data is validated with Pydantic and loaded to DuckDB raw schema.
         """
     )
