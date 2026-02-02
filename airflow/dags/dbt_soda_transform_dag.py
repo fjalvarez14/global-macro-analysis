@@ -1,7 +1,6 @@
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.standard.operators.bash import BashOperator
-from airflow.sensors.external_task import ExternalTaskSensor
 from datetime import datetime, timedelta
 import logging
 import os
@@ -21,55 +20,11 @@ with DAG(
     'dbt_soda_transform',
     default_args=default_args,
     description='Run dbt transformations with Soda data quality checks before and after',
-    schedule=None,  # Manual trigger after ingestion DAGs complete
+    schedule=None,  
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=['dbt', 'transformation', 'data_quality', 'soda'],
 ) as dag:
-    
-    # Wait for seed data to complete
-    wait_for_seed = ExternalTaskSensor(
-        task_id='wait_for_seed_data',
-        external_dag_id='load_seed_data',
-        external_task_id='load_country_metadata',
-        timeout=600,
-        poke_interval=30,
-        mode='reschedule',
-        doc_md="Wait for seed data (country metadata) to be loaded"
-    )
-    
-    # Wait for HDR data to complete
-    wait_for_hdr = ExternalTaskSensor(
-        task_id='wait_for_hdr_data',
-        external_dag_id='fetch_hdr_data',
-        external_task_id='fetch_hdr_data',
-        timeout=600,
-        poke_interval=30,
-        mode='reschedule',
-        doc_md="Wait for HDR data to be fetched"
-    )
-    
-    # Wait for IMF data to complete
-    wait_for_imf = ExternalTaskSensor(
-        task_id='wait_for_imf_data',
-        external_dag_id='fetch_imf_data',
-        external_task_id='fetch_imf_data',
-        timeout=600,
-        poke_interval=30,
-        mode='reschedule',
-        doc_md="Wait for IMF data to be fetched"
-    )
-    
-    # Wait for World Bank data to complete
-    wait_for_wb = ExternalTaskSensor(
-        task_id='wait_for_wb_data',
-        external_dag_id='fetch_wb_data',
-        external_task_id='fetch_wb_data',
-        timeout=600,
-        poke_interval=30,
-        mode='reschedule',
-        doc_md="Wait for World Bank data to be fetched"
-    )
     
     soda_check_staging = BashOperator(
         task_id='soda_check_staging',
@@ -145,6 +100,4 @@ with DAG(
         """
     )
     
-    # Define task dependencies
-    # All data ingestion DAGs must complete before starting transformation
-    [wait_for_seed, wait_for_hdr, wait_for_imf, wait_for_wb] >> soda_check_staging >> dbt_clean >> dbt_deps >> dbt_run >> dbt_test >> soda_check_marts
+    soda_check_staging >> dbt_clean >> dbt_deps >> dbt_run >> dbt_test >> soda_check_marts

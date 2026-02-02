@@ -1,5 +1,6 @@
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from datetime import datetime, timedelta
 import sys
 import logging
@@ -25,7 +26,7 @@ with DAG(
     'load_seed_data',
     default_args=default_args,
     description='Load country metadata seed data to DuckDB',
-    schedule=None,  # Manual trigger only - seed data changes infrequently
+    schedule=None, 
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=['seed_data', 'metadata', 'country_dimension'],
@@ -46,3 +47,26 @@ with DAG(
         Run this DAG first before any data ingestion DAGs.
         """
     )
+    
+    trigger_hdr = TriggerDagRunOperator(
+        task_id='trigger_hdr_ingestion',
+        trigger_dag_id='fetch_hdr_data',
+        wait_for_completion=False,
+        doc_md="Trigger HDR data ingestion"
+    )
+    
+    trigger_imf = TriggerDagRunOperator(
+        task_id='trigger_imf_ingestion',
+        trigger_dag_id='fetch_imf_data',
+        wait_for_completion=False,
+        doc_md="Trigger IMF data ingestion"
+    )
+    
+    trigger_wb = TriggerDagRunOperator(
+        task_id='trigger_wb_ingestion',
+        trigger_dag_id='fetch_wb_data',
+        wait_for_completion=False,
+        doc_md="Trigger World Bank data ingestion"
+    )
+    
+    load_seed_task >> [trigger_hdr, trigger_imf, trigger_wb]

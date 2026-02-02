@@ -27,7 +27,7 @@ with DAG(
     'fetch_hdr_data',
     default_args=default_args,
     description='Fetch UNDP HDR indicators (23 indicators) and load to DuckDB',
-    schedule=None,  # Manual trigger
+    schedule=None,  
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=['undp_hdr', 'data_ingestion', 'human_development'],
@@ -36,7 +36,7 @@ with DAG(
     fetch_hdr_task = PythonOperator(
         task_id='fetch_hdr_indicators',
         python_callable=run_hdr_ingestion,
-        op_kwargs={},  # Can pass custom start_year/end_year if needed
+        op_kwargs={}, 
         doc_md="""
         ## UNDP HDR Data Ingestion
         

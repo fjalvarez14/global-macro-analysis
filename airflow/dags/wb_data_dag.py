@@ -26,7 +26,7 @@ with DAG(
     'fetch_wb_data',
     default_args=default_args,
     description='Fetch World Bank indicators (35 indicators) and load to DuckDB',
-    schedule=None,  # Manual trigger
+    schedule=None, 
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=['world_bank', 'data_ingestion', 'macro_indicators'],
@@ -35,7 +35,7 @@ with DAG(
     fetch_wb_task = PythonOperator(
         task_id='fetch_wb_indicators',
         python_callable=run_wb_ingestion,
-        op_kwargs={},  # Can pass custom start_year/end_year if needed
+        op_kwargs={},
         doc_md="""
         ## World Bank Data Ingestion
         
