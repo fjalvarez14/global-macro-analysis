@@ -43,18 +43,16 @@ models:
             - country_code
             - year
 
-  - name: mart_country_profiles
-    description: "Latest year snapshot of key indicators by country for quick analysis"
+
+  - name: mart_country_indicators_wide
+    description: "Wide format table with latest available value and year for each of 56 indicators. Each indicator has two columns: the value and the year when that value was recorded. NULL values indicate no data available for that country-indicator combination."
     columns:
       - name: country_code
         description: "ISO3 country code (primary key)"
         tests:
           - unique
           - not_null
-          - relationships:
-              to: ref('dim_country')
-              field: country_code
-      - name: year
-        description: "Most recent year with data"
+      - name: country_name
+        description: "Official country name"
         tests:
           - not_null

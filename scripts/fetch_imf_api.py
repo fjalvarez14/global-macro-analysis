@@ -46,7 +46,6 @@ class FDIDataPoint(BaseModel):
     @field_validator('country_code')
     @classmethod
     def validate_country_code(cls, v):
-        # Skip aggregate codes
         if v.startswith("1C_") or "ALLC" in v:
             raise ValueError(f'Aggregate country code {v} not allowed')
         return v
@@ -60,7 +59,7 @@ class IMFPivotedRow(BaseModel):
     BCA: Optional[float] = None          # Current account
     PPPEX: Optional[float] = None        # PPP conversion rate
 
-#  5 indicator - Yearly - IMF WEO
+#  4 indicator - Yearly - IMF WEO
 imf_indicators = [ 
     'GGXWDG_NGDP',           # Gross public debt - WEO
     'GGXCNL_NGDP',           # Primary balance - WEO

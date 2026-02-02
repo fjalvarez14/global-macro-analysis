@@ -1,0 +1,5 @@
+data_source global_macro_warehouse:
+  type: duckdb
+  path: /opt/airflow/data/warehouse.duckdb
+  schema: raw
+  read_only: true

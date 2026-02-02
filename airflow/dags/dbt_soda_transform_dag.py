@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.standard.operators.bash import BashOperator
+from airflow.sensors.external_task import ExternalTaskSensor
 from datetime import datetime, timedelta
 import logging
 import os
@@ -19,12 +20,70 @@ default_args = {
 with DAG(
     'dbt_soda_transform',
     default_args=default_args,
-    description='Run dbt transformations and Soda data quality checks',
+    description='Run dbt transformations with Soda data quality checks before and after',
     schedule=None,  # Manual trigger after ingestion DAGs complete
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=['dbt', 'transformation', 'data_quality', 'soda'],
 ) as dag:
+    
+    # Wait for seed data to complete
+    wait_for_seed = ExternalTaskSensor(
+        task_id='wait_for_seed_data',
+        external_dag_id='load_seed_data',
+        external_task_id='load_country_metadata',
+        timeout=600,
+        poke_interval=30,
+        mode='reschedule',
+        doc_md="Wait for seed data (country metadata) to be loaded"
+    )
+    
+    # Wait for HDR data to complete
+    wait_for_hdr = ExternalTaskSensor(
+        task_id='wait_for_hdr_data',
+        external_dag_id='fetch_hdr_data',
+        external_task_id='fetch_hdr_data',
+        timeout=600,
+        poke_interval=30,
+        mode='reschedule',
+        doc_md="Wait for HDR data to be fetched"
+    )
+    
+    # Wait for IMF data to complete
+    wait_for_imf = ExternalTaskSensor(
+        task_id='wait_for_imf_data',
+        external_dag_id='fetch_imf_data',
+        external_task_id='fetch_imf_data',
+        timeout=600,
+        poke_interval=30,
+        mode='reschedule',
+        doc_md="Wait for IMF data to be fetched"
+    )
+    
+    # Wait for World Bank data to complete
+    wait_for_wb = ExternalTaskSensor(
+        task_id='wait_for_wb_data',
+        external_dag_id='fetch_wb_data',
+        external_task_id='fetch_wb_data',
+        timeout=600,
+        poke_interval=30,
+        mode='reschedule',
+        doc_md="Wait for World Bank data to be fetched"
+    )
+    
+    soda_check_staging = BashOperator(
+        task_id='soda_check_staging',
+        bash_command='cd /opt/airflow/soda && soda scan -d global_macro_warehouse -c configuration_raw.yml checks_raw.yml',
+        doc_md="""
+        ## Soda Pre-Transformation Checks
+        Validates staging tables BEFORE dbt runs:
+        - Row counts > 0
+        - No duplicate country codes
+        - No missing required fields
+        - Valid year ranges (2000-2026)
+        - Ensures clean input data
+        """
+    )
     
     dbt_clean = BashOperator(
         task_id='dbt_clean',
@@ -34,7 +93,6 @@ with DAG(
         Removes compiled artifacts from target/ only:
         - Clears stale compiled tests
         - Ensures fresh compilation
-        - Prevents orphaned test execution
         - Keeps dbt_packages/ intact
         """
     )
@@ -56,7 +114,7 @@ with DAG(
         ## Run dbt Models
         Executes all dbt models to transform raw data:
         - **Staging**: Clean and standardize raw data from 4 sources
-        - **Marts**: Create dim_country and fact_macro_indicators
+        - **Marts**: Create dim_country, fact_macro_indicators, and wide format tables
         """
     )
     
@@ -65,25 +123,28 @@ with DAG(
         bash_command='cd /opt/airflow/dbt && dbt test --profiles-dir .',
         doc_md="""
         ## Run dbt Tests
-        Executes built-in and custom dbt tests:
-        - Uniqueness checks
+        Executes dbt built-in tests:
+        - Uniqueness checks (unique, unique_combination_of_columns)
         - Not-null checks
-        - Referential integrity
+        - Referential integrity (relationships)
+        - Accepted values
         """
     )
     
-    soda_ingest = BashOperator(
-        task_id='soda_ingest_dbt_tests',
-        bash_command='cd /opt/airflow/soda && soda ingest dbt -d global_macro_dbt -c configuration.yml --dbt-artifacts ../dbt/target',
+    soda_check_marts = BashOperator(
+        task_id='soda_check_marts',
+        bash_command='cd /opt/airflow/soda && soda scan -d global_macro_warehouse -c configuration_marts.yml checks_marts.yml',
         doc_md="""
-        ## Soda Ingest dbt Tests
-        Ingests dbt test results from manifest.json and run_results.json:
-        - Reads all dbt test outcomes
-        - Translates results to Soda format
-        - Enables monitoring in Soda Cloud
-        - No duplicate testing - just monitors dbt results
+        ## Soda Post-Transformation Checks
+        Validates marts tables AFTER dbt runs:
+        - All marts have data (row_count > 0)
+        - No duplicate primary keys
+        - No missing required fields
+        - Schema validation
+        - Ensures quality output for dashboards
         """
     )
     
     # Define task dependencies
-    dbt_clean >> dbt_deps >> dbt_run >> dbt_test >> soda_ingest
+    # All data ingestion DAGs must complete before starting transformation
+    [wait_for_seed, wait_for_hdr, wait_for_imf, wait_for_wb] >> soda_check_staging >> dbt_clean >> dbt_deps >> dbt_run >> dbt_test >> soda_check_marts

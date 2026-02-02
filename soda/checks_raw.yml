@@ -1,0 +1,196 @@
+# Soda checks before creation of staging tables
+checks for country_metadata:
+  - row_count > 0
+  - missing_count(iso3) = 0
+  - missing_count(country_name) = 0
+  - missing_count(continent) = 0
+  - missing_count(region) = 0
+  - missing_count(income_group) = 0
+
+checks for wb_indicators:
+  - row_count > 0
+  - missing_count(country_code) = 0
+  - missing_count(year) = 0
+  - invalid_count(year):
+      valid min: 2000
+      warn: when > 0
+      fail: when >= 150
+  # GDP PPP range validation
+  - invalid_count(NY_GDP_MKTP_PP_CD):
+      valid min: 20000000
+      valid max: 50000000000000
+      warn: when > 0
+      fail: when >= 150
+  # Non-negative validations
+  - invalid_count(NY_GDP_PCAP_PP_CD):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(NE_EXP_GNFS_ZS):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(NE_IMP_GNFS_ZS):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(SP_POP_TOTL):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  # Percentage validations (0-100)
+  - invalid_count(NV_AGR_TOTL_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(NV_IND_TOTL_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(NV_SRV_TOTL_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(SL_UEM_TOTL_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(SL_TLF_CACT_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(SI_POV_GINI):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(SE_XPD_TOTL_GD_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(SH_XPD_CHEX_GD_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(SH_XPD_GHED_CH_ZS):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+
+checks for hdr_indicators:
+  - row_count > 0
+  - missing_count(countryIsoCode) = 0
+  - missing_count(year) = 0
+  - invalid_count(year):
+      valid min: 2000
+      warn: when > 0
+      fail: when >= 150
+  # Index validations (0-1 range)
+  - invalid_count(hdi):
+      valid min: 0
+      valid max: 1
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(gii):
+      valid min: 0
+      valid max: 1
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(gdi):
+      valid min: 0
+      valid max: 2
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(mpi_value):
+      valid min: 0
+      valid max: 1
+      warn: when > 0
+      fail: when >= 150
+  # Percentage validations
+  - invalid_count(coef_ineq):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(ineq_inc):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(ineq_edu):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(ineq_le):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(lfpr_m):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(lfpr_f):
+      valid min: 0
+      valid max: 100
+      warn: when > 0
+      fail: when >= 150
+  # Non-negative validations
+  - invalid_count(mys):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(eys):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(le):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+
+checks for imf_weo_indicators:
+  - row_count > 0
+  - missing_count(country_code) = 0
+  - missing_count(year) = 0
+  # Non-negative validations
+  - invalid_count(GGXWDG_NGDP):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(PPPEX):
+      valid min: 0
+      warn: when > 0
+      fail: when >= 150
+  # Range validations
+  - invalid_count(GGXCNL_NGDP):
+      valid min: -100
+      valid max: 200
+      warn: when > 0
+      fail: when >= 150
+  - invalid_count(BCA):
+      valid min: -2000
+      valid max: 1500
+      warn: when > 0
+      fail: when >= 150
+
+
+checks for imf_fdi_indicator:
+  - row_count > 0
+  - missing_count(country_code) = 0
+  - missing_count(year) = 0
+  - invalid_count(FD_FD_IX):
+      valid min: 0
+      valid max: 1
+      warn: when > 0
+      fail: when >= 150

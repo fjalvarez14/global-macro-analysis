@@ -1,0 +1,35 @@
+# Soda checks for marts tables
+
+checks for dim_country:
+  - row_count > 0
+  - duplicate_count(country_code) = 0
+  - missing_count(country_code) = 0
+  - missing_count(country_name) = 0
+  - missing_count(continent) = 0
+  - invalid_count(continent) = 0:
+      valid values: ['Africa', 'Asia', 'Europe', 'North America', 'South America', 'Oceania', 'Antarctica']
+  - invalid_count(income_group) = 0:
+      valid values: ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
+  - schema:
+      fail:
+        when required column missing: [country_code, country_name, continent, region, income_group]
+
+checks for fact_macro_indicators:
+  - row_count > 0
+  - missing_count(country_code) = 0
+  - missing_count(country_name) = 0
+  - missing_count(year) = 0
+  - min(year) >= 2000
+  - duplicate_count(country_code, year) = 0
+  - schema:
+      fail:
+        when required column missing: [country_code, country_name, year]
+
+checks for mart_country_indicators_wide:
+  - row_count > 0
+  - duplicate_count(country_code) = 0
+  - missing_count(country_code) = 0
+  - missing_count(country_name) = 0
+  - schema:
+      fail:
+        when required column missing: [country_code, country_name]

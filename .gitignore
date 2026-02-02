@@ -66,5 +66,4 @@ desktop.ini
 *.cache
 
 # Other
-CLEANUP.md 
-DEPLOYMENT.md
+docs/
