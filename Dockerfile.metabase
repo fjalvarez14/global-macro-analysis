@@ -1,9 +1,7 @@
-# Dockerfile for Metabase with DuckDB driver support
 # Based on official guidance from https://github.com/motherduckdb/metabase_duckdb_driver
 
 FROM eclipse-temurin:21-jre-jammy
 
-# Build arguments for versions
 ARG METABASE_VERSION=0.56.9
 ARG METABASE_DUCKDB_DRIVER_VERSION=1.4.3.1
 

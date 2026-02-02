@@ -76,9 +76,6 @@ x-airflow-common:
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
-
-
-
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/logs:/opt/airflow/logs
@@ -107,7 +104,7 @@ services:
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
       # Mount initialization script to create metabase database
-      - ${AIRFLOW_PROJ_DIR:-.}/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ${AIRFLOW_PROJ_DIR:-.}/metabase/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -364,9 +361,7 @@ services:
       MB_DB_HOST: postgres
       MB_PLUGINS_DIR: /home/metabase/plugins/
     volumes:
-      # Mount DuckDB database as read-only
       - ${AIRFLOW_PROJ_DIR:-.}/data/warehouse.duckdb:/home/metabase/data/warehouse.duckdb:ro
-      # Mount entire data directory for potential parquet access
       - ${AIRFLOW_PROJ_DIR:-.}/data:/home/metabase/data:ro
     restart: always
     depends_on:
