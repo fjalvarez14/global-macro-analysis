@@ -23,8 +23,6 @@ This pipeline integrates **56 macroeconomic indicators** from three authoritativ
 - **Business Intelligence**: Metabase with DuckDB driver
 - **Container Platform**: Docker Compose (7 services)
 
-**Architecture Diagram**: See [docs/ARCHITECTURE_DIAGRAM.md](docs/ARCHITECTURE_DIAGRAM.md) for comprehensive system diagrams.
-
 ### Data Flow
 
 ```
@@ -606,15 +604,6 @@ soda scan -d global_macro_warehouse -c configuration_marts.yml checks_marts.yml
 
 ---
 
-## 📚 Documentation
-
-- **[Architecture Diagrams](docs/ARCHITECTURE_DIAGRAM.md)** - System architecture, data flow, technology stack
-- **[Project Audit Report](docs/PROJECT_AUDIT_REPORT.md)** - Comprehensive project health analysis
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
-- **[Cleanup Instructions](docs/CLEANUP.md)** - Environment cleanup and reset procedures
-
----
-
 ## 🤝 Contributing
 
 ### Development Workflow
@@ -652,8 +641,7 @@ This project is licensed under the MIT License - see LICENSE file for details.
 ## 📊 Project Status
 
 **Current Version**: 1.0.0  
-**Status**: Production Ready ✅  
-**Health Score**: 95/100 🌟  
+**Status**: Production Ready 
 **Last Updated**: February 2, 2026
 
 **Recent Updates**:
